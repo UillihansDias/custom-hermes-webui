@@ -312,8 +312,19 @@ function cmdHelp(){
   showToast(t('type_slash'));
 }
 
-function cmdClear(){
+async function cmdClear(){
   if(!S.session)return;
+  try {
+    const data = await api('/api/session/clear', {
+      method: 'POST',
+      body: JSON.stringify({session_id: S.session.session_id})
+    });
+    S.session = data.session;
+    if(typeof syncTopbar==='function') syncTopbar();
+    if(typeof renderSessionList==='function') await renderSessionList();
+  } catch(e) {
+    console.error('Failed to clear conversation persistently:', e);
+  }
   S.messages=[];S.toolCalls=[];
   clearLiveToolCards();
   if(typeof clearCompressionUi==='function') clearCompressionUi();

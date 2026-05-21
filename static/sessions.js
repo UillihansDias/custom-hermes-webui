@@ -3519,6 +3519,20 @@ function renderSessionListFromCache(){
     if(!readOnly){
       actions=document.createElement('div');
       actions.className='session-actions';
+      
+      const delBtn=document.createElement('button');
+      delBtn.type='button';
+      delBtn.className='session-actions-trigger session-delete-btn';
+      delBtn.title=t('session_delete')||'Delete conversation';
+      delBtn.setAttribute('aria-label',t('session_delete')||'Delete conversation');
+      delBtn.innerHTML=ICONS.trash;
+      delBtn.onclick=(e)=>{
+        e.stopPropagation();
+        e.preventDefault();
+        deleteSession(s.session_id);
+      };
+      actions.appendChild(delBtn);
+
       const menuBtn=document.createElement('button');
       menuBtn.type='button';
       menuBtn.className='session-actions-trigger';
