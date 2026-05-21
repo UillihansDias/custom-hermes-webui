@@ -112,6 +112,9 @@
   /* ── Skin: Sisyphus (purple) ── */
   :root[data-skin="sisyphus"]{--accent:#7C3AED;--accent-hover:#6D28D9;--accent-bg:rgba(124,58,237,0.08);--accent-bg-strong:rgba(124,58,237,0.15);--accent-text:#6D28D9;}
   :root.dark[data-skin="sisyphus"]{--accent:#A78BFA;--accent-hover:#8B5CF6;--accent-bg:rgba(167,139,250,0.08);--accent-bg-strong:rgba(167,139,250,0.15);--accent-text:#A78BFA;}
+  /* ── Skin: Emerald (green) ── */
+  :root[data-skin="emerald"]{--accent:#059669;--accent-hover:#047857;--accent-bg:rgba(5,150,105,0.08);--accent-bg-strong:rgba(5,150,105,0.15);--accent-text:#047857;}
+  :root.dark[data-skin="emerald"]{--accent:#6EE7B7;--accent-hover:#34D399;--accent-bg:rgba(110,231,183,0.08);--accent-bg-strong:rgba(110,231,183,0.15);--accent-text:#6EE7B7;}
   /* ── Skin: Charizard (orange) ── */
   :root[data-skin="charizard"]{--accent:#EA580C;--accent-hover:#C2410C;--accent-bg:rgba(234,88,12,0.08);--accent-bg-strong:rgba(234,88,12,0.15);--accent-text:#C2410C;}
   :root.dark[data-skin="charizard"]{--accent:#FB923C;--accent-hover:#F97316;--accent-bg:rgba(251,146,60,0.08);--accent-bg-strong:rgba(251,146,60,0.15);--accent-text:#FB923C;}
