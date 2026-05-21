@@ -1010,6 +1010,90 @@
   .has-tooltip--left::after{left:auto;right:calc(100% + 8px);top:50%;transform:translateY(-50%);}
   @media(prefers-reduced-motion:reduce){.has-tooltip::after{transition:none;transition-delay:0s;}}
 .rail-spacer{flex:1;min-height:8px;}
+
+  /* Theme Toggle Vertical Capsule */
+  .rail-theme-toggle {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  .rail-theme-toggle #btnThemeToggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+    padding: 0;
+  }
+  .rail-theme-toggle #btnThemeToggle:hover {
+    color: var(--text);
+    background: var(--hover-bg);
+  }
+  .rail-theme-options {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--sidebar) 85%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, padding 0.3s, border-color 0.3s, box-shadow 0.3s;
+    box-shadow: none;
+    z-index: 100;
+  }
+  .rail-theme-toggle.expanded .rail-theme-options {
+    height: 114px;
+    padding: 6px 0;
+    opacity: 1;
+    pointer-events: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    border-color: var(--accent);
+    overflow: visible;
+  }
+  .theme-option-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+  .theme-option-btn:hover {
+    color: var(--text);
+    background: var(--hover-bg);
+  }
+  .theme-option-btn.active {
+    color: var(--accent);
+    background: var(--accent-bg);
+    border-color: var(--accent);
+  }
+  .rail-theme-options .has-tooltip::after {
+    left: calc(100% + 12px);
+  }
 .rail .nav-tab{flex:0 0 auto;padding:0;font-size:inherit;border-bottom:none;overflow:visible;}
 /* Note: previously this block had `.rail .nav-tab:hover::after { content: none }`
    to suppress the legacy `.nav-tab:hover::after { content: attr(data-label) }`
@@ -4432,5 +4516,31 @@ main.main.showing-logs > .main-content-split > #mainLogs{display:flex;}
   .header-icon-btn.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
   
   /* Focus mode exit button */
-  #btnExitFocus{display:none;position:fixed;top:10px;right:10px;z-index:100;background:var(--sidebar);border:1px solid var(--border);box-shadow:var(--shadow-md);border-radius:8px;padding:4px;}
-  :root.focus-mode #btnExitFocus{display:flex;}
+  #btnExitFocus {
+    display: none;
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 1000;
+    background: color-mix(in srgb, var(--sidebar) 85%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    border-radius: 8px;
+    padding: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    align-items: center;
+    justify-content: center;
+  }
+  #btnExitFocus:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--hover-bg);
+    transform: translateY(-1px);
+  }
+  :root.focus-mode #btnExitFocus {
+    display: flex;
+  }

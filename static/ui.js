@@ -8202,6 +8202,54 @@ function syncThemeIcons() {
   suns.forEach(el => el.style.display = theme === 'light' ? '' : 'none');
   moons.forEach(el => el.style.display = theme === 'dark' ? '' : 'none');
   systems.forEach(el => el.style.display = theme === 'system' ? '' : 'none');
+  
+  // Keep the rail theme options menu highlighted correctly
+  syncThemeMenu(theme);
+}
+
+function toggleThemeDropdown(event) {
+  if (event) event.stopPropagation();
+  const container = document.getElementById('railThemeToggle');
+  if (container) {
+    container.classList.toggle('expanded');
+    // Hide tooltip when expanded to prevent clutter
+    if (container.classList.contains('expanded')) {
+      const btn = document.getElementById('btnThemeToggle');
+      if (btn) btn.removeAttribute('data-tooltip');
+    } else {
+      const btn = document.getElementById('btnThemeToggle');
+      if (btn) btn.setAttribute('data-tooltip', 'Select theme');
+    }
+  }
+}
+
+function selectTheme(themeName, event) {
+  if (event) event.stopPropagation();
+  
+  if (typeof _pickTheme === 'function') {
+    _pickTheme(themeName);
+  } else {
+    localStorage.setItem('hermes-theme', themeName);
+    if (typeof _applyTheme === 'function') _applyTheme(themeName);
+    api('/api/settings', { method: 'POST', body: JSON.stringify({ theme: themeName }) }).catch(() => {});
+  }
+  
+  syncThemeIcons();
+  
+  // Collapse the dropdown
+  const container = document.getElementById('railThemeToggle');
+  if (container) {
+    container.classList.remove('expanded');
+    const btn = document.getElementById('btnThemeToggle');
+    if (btn) btn.setAttribute('data-tooltip', 'Select theme');
+  }
+}
+
+function syncThemeMenu(themeName) {
+  const activeTheme = themeName || localStorage.getItem('hermes-theme') || 'dark';
+  document.querySelectorAll('.theme-option-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-theme-val') === activeTheme);
+  });
 }
 
 function toggleFocusMode() {
@@ -8214,7 +8262,19 @@ function toggleFocusMode() {
 // Restore focus mode on load
 if (localStorage.getItem('hermes-focus-mode') === '1') {
   document.documentElement.classList.add('focus-mode');
+  const btn = document.getElementById('btnFocusMode');
+  if (btn) btn.classList.add('active');
 }
+
+// Global click handler to collapse theme dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const container = document.getElementById('railThemeToggle');
+  if (container && !container.contains(e.target)) {
+    container.classList.remove('expanded');
+    const btn = document.getElementById('btnThemeToggle');
+    if (btn) btn.setAttribute('data-tooltip', 'Select theme');
+  }
+});
 
 // Initialize theme icons
 syncThemeIcons();
