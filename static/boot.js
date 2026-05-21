@@ -1404,12 +1404,10 @@ function applyBotName(){
     const s=await api('/api/settings');
     _bootSettings=s;
     
-    // Update rail & sidebar footer version text
+    // Update topbar version text
     const versionStr = s.webui_version ? `v${s.webui_version}` : 'v—';
     const daemonVerText = document.getElementById('daemonVersionText');
     if(daemonVerText) daemonVerText.textContent = versionStr;
-    const mobileDaemonVerText = document.querySelector('.mobile-daemon-version-text');
-    if(mobileDaemonVerText) mobileDaemonVerText.textContent = versionStr;
 
     window._sendKey=s.send_key||'enter';
     window._showTokenUsage=!!s.show_token_usage;
@@ -1623,7 +1621,6 @@ function applyBotName(){
   // Start background connection health monitor
   (function startDaemonStatusMonitor() {
     const daemonDot = document.getElementById('daemonStatusDot');
-    const mobileDaemonDot = document.querySelector('.mobile-daemon-status-dot');
     
     async function checkStatus() {
       let online = false;
@@ -1640,10 +1637,6 @@ function applyBotName(){
       if (daemonDot) {
         daemonDot.className = newClass;
         daemonDot.title = newTitle;
-      }
-      if (mobileDaemonDot) {
-        mobileDaemonDot.className = newClass;
-        mobileDaemonDot.title = newTitle;
       }
     }
     
