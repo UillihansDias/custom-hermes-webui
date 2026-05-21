@@ -1403,6 +1403,14 @@ function applyBotName(){
   try{
     const s=await api('/api/settings');
     _bootSettings=s;
+    
+    // Update rail & sidebar footer version text
+    const versionStr = s.webui_version ? `v${s.webui_version}` : 'v—';
+    const daemonVerText = document.getElementById('daemonVersionText');
+    if(daemonVerText) daemonVerText.textContent = versionStr;
+    const mobileDaemonVerText = document.querySelector('.mobile-daemon-version-text');
+    if(mobileDaemonVerText) mobileDaemonVerText.textContent = versionStr;
+
     window._sendKey=s.send_key||'enter';
     window._showTokenUsage=!!s.show_token_usage;
     window._showQuotaChip=s.show_quota_chip===true;
@@ -1611,6 +1619,37 @@ function applyBotName(){
   await renderSessionList();
   // Start real-time gateway session sync if setting is enabled
   if(typeof startGatewaySSE==='function') startGatewaySSE();
+
+  // Start background connection health monitor
+  (function startDaemonStatusMonitor() {
+    const daemonDot = document.getElementById('daemonStatusDot');
+    const mobileDaemonDot = document.querySelector('.mobile-daemon-status-dot');
+    
+    async function checkStatus() {
+      let online = false;
+      try {
+        const res = await fetch(new URL('health', document.baseURI || location.href).href, { cache: 'no-store' });
+        online = res.ok;
+      } catch (e) {
+        online = false;
+      }
+      
+      const newClass = online ? 'status-dot online' : 'status-dot offline';
+      const newTitle = online ? 'Daemon online' : 'Daemon offline';
+      
+      if (daemonDot) {
+        daemonDot.className = newClass;
+        daemonDot.title = newTitle;
+      }
+      if (mobileDaemonDot) {
+        mobileDaemonDot.className = newClass;
+        mobileDaemonDot.title = newTitle;
+      }
+    }
+    
+    void checkStatus();
+    setInterval(checkStatus, 12000);
+  })();
 })().catch(e=>{
   console.error('[hermes] boot failed', e);
   try{S._bootReady=true;}catch(_){}

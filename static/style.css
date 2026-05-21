@@ -1112,6 +1112,128 @@
    `.nav-tab:hover::after` data-label tooltip to `.sidebar-nav` (mobile) only
    (see line ~681). The rail rule is no longer needed. */
   .rail .nav-tab.active::before{content:'';position:absolute;left:-6px;top:50%;bottom:auto;transform:translateY(-50%);width:3px;height:16px;background:var(--accent);border-radius:0 2px 2px 0;}
+
+  /* Pulsing connection status dot styling */
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .status-dot.online {
+    background-color: #50c878; /* Vibrant emerald green */
+    box-shadow: 0 0 8px rgba(80, 200, 120, 0.6);
+  }
+  .status-dot.online::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: #50c878;
+    animation: status-pulse 2s infinite ease-in-out;
+  }
+  .status-dot.offline {
+    background-color: #ef5350; /* Soft warm red */
+    box-shadow: 0 0 8px rgba(239, 83, 80, 0.6);
+  }
+  .status-dot.offline::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: #ef5350;
+    animation: status-pulse 2s infinite ease-in-out;
+  }
+  @keyframes status-pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2.2);
+      opacity: 0;
+    }
+  }
+
+  /* Navigation Rail Bottom Status & Version */
+  .rail-status-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+  .rail-status-badge .version-text {
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    user-select: none;
+    margin-top: 2px;
+  }
+  .rail-status-badge:hover .version-text {
+    opacity: 0.85;
+  }
+
+  /* Mobile Sidebar Footer */
+  .sidebar-footer {
+    display: none;
+    flex-shrink: 0;
+  }
+
+  @media(max-width: 640px) {
+    .sidebar-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--sidebar);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .sidebar-footer-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    .sidebar-footer-btn:hover {
+      color: var(--text);
+    }
+    .sidebar-footer-version {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .sidebar-footer-version .version-text {
+      opacity: 0.65;
+    }
+  }
+
   .dashboard-link{position:relative;}
   .dashboard-link-visible{display:flex!important;}
   .dashboard-external-badge{position:absolute;right:5px;top:5px;width:9px;height:9px;border-radius:2px;border:1px solid var(--accent);background:var(--sidebar);box-shadow:0 0 0 2px var(--sidebar);opacity:.95;}
