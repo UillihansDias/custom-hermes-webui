@@ -2905,6 +2905,23 @@ function _markSessionListPointerUp(){
   if(_pendingSessionListPayload) _schedulePendingSessionListApply();
 }
 
+function _categorizeSessions(items){
+  const standard=[];
+  const cli=[];
+  const telegram=[];
+  if(!items) return {standard,cli,telegram};
+  for(const s of items){
+    if(_isCliSession(s)){
+      cli.push(s);
+    }else if(_isMessagingSession(s) && (_getChannelLabel(s)||'').toLowerCase()==='telegram'){
+      telegram.push(s);
+    }else{
+      standard.push(s);
+    }
+  }
+  return {standard,cli,telegram};
+}
+
 function renderSessionListFromCache(){
   // Don't re-render while user is actively renaming a session (would destroy the input)
   if(_renamingSid) return;
@@ -3092,7 +3109,10 @@ function renderSessionListFromCache(){
   const flatSessionRows=[];
   for(const g of groups){
     if(_groupCollapsed[g.label]) continue;
-    for(const s of g.items){ flatSessionRows.push({group:g,session:s}); }
+    const {standard,cli,telegram}=_categorizeSessions(g.items);
+    for(const s of standard){ flatSessionRows.push({group:g,session:s}); }
+    for(const s of cli){ flatSessionRows.push({group:g,session:s}); }
+    for(const s of telegram){ flatSessionRows.push({group:g,session:s}); }
   }
   _sessionVisibleSidebarIds=flatSessionRows.map(row=>row.session&&row.session.session_id).filter(Boolean);
   _ensureSessionVirtualScrollHandler(list);
@@ -3164,14 +3184,46 @@ function renderSessionListFromCache(){
     wrapper.appendChild(hdr);
     let groupTopPad=0;
     let groupBottomPad=0;
-    for(const s of g.items){
-      if(isGroupCollapsed) continue;
-      const rowIndex=globalSessionRowIndex++;
-      const inWindow=!virtualWindow.virtualized||(rowIndex>=virtualWindow.start&&rowIndex<virtualWindow.end);
-      if(inWindow){ body.appendChild(_renderOneSession(s, Boolean(g.isPinned))); }
-      else if(rowIndex<virtualWindow.start){ groupTopPad+=virtualWindow.itemHeight; }
-      else { groupBottomPad+=virtualWindow.itemHeight; }
-    }
+    const {standard,cli,telegram}=_categorizeSessions(g.items);
+    const renderSubGroup=(subItems, typeLabel)=>{
+      if(isGroupCollapsed||subItems.length===0) return;
+      if(typeLabel==='CLI'||typeLabel==='Telegram'){
+        const subHdr=document.createElement('div');
+        subHdr.className='session-sub-header';
+        const subTitle=document.createElement('span');
+        subTitle.className='session-sub-header-title';
+        subTitle.textContent=typeLabel;
+        subHdr.appendChild(subTitle);
+        const newBtn=document.createElement('button');
+        newBtn.className='session-sub-header-new-btn';
+        newBtn.textContent='+ New';
+        newBtn.title=`New ${typeLabel} session`;
+        newBtn.onclick=async(e)=>{
+          e.stopPropagation();
+          e.preventDefault();
+          if(S.session
+             && (S.session.message_count||0)===0
+             && !S.busy
+             && !S.session.active_stream_id
+             && !S.session.pending_user_message){
+            $('msg').focus();closeMobileSidebar();return;
+          }
+          await newSession();await renderSessionList();closeMobileSidebar();$('msg').focus();
+        };
+        subHdr.appendChild(newBtn);
+        body.appendChild(subHdr);
+      }
+      for(const s of subItems){
+        const rowIndex=globalSessionRowIndex++;
+        const inWindow=!virtualWindow.virtualized||(rowIndex>=virtualWindow.start&&rowIndex<virtualWindow.end);
+        if(inWindow){ body.appendChild(_renderOneSession(s, Boolean(g.isPinned))); }
+        else if(rowIndex<virtualWindow.start){ groupTopPad+=virtualWindow.itemHeight; }
+        else { groupBottomPad+=virtualWindow.itemHeight; }
+      }
+    };
+    renderSubGroup(standard, 'Chats');
+    renderSubGroup(cli, 'CLI');
+    renderSubGroup(telegram, 'Telegram');
     if(groupTopPad>0){ body.insertBefore(_sessionVirtualSpacer(groupTopPad,'before'), body.firstChild); }
     if(groupBottomPad>0){ body.appendChild(_sessionVirtualSpacer(groupBottomPad,'after')); }
     wrapper.appendChild(body);

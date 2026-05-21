@@ -751,6 +751,12 @@
   .session-date-header:hover{opacity:1;}
   .session-date-header.pinned{color:var(--accent);}
 
+  /* Collapsible sub-headers (CLI/Telegram) */
+  .session-sub-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 4px 16px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);opacity:.75;user-select:none;}
+  .session-sub-header-title{opacity:.8;}
+  .session-sub-header-new-btn{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;padding:2px 6px;border-radius:4px;color:var(--muted);cursor:pointer;opacity:.6;font-size:9px;font-weight:600;transition:all .15s ease;line-height:1;user-select:none;}
+  .session-sub-header-new-btn:hover{opacity:1;color:var(--accent);background:var(--hover-bg);}
+
   /* ── Batch select mode ── */
   .session-select-toggle{font-size:11px;padding:6px 10px;color:var(--muted);cursor:pointer;text-align:center;opacity:.6;transition:opacity .15s;user-select:none;margin-top:4px;border-radius:6px;}
   .session-select-toggle:hover{opacity:1;background:var(--hover-bg);}
