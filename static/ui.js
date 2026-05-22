@@ -99,10 +99,18 @@ function _patchOfflineFetch(){
   _offlineFetchPatched=true;
   _offlineRawFetch=window.fetch.bind(window);
   window.fetch=async function(...args){
-    try{return await _offlineRawFetch(...args);}
+    try{
+      const res=await _offlineRawFetch(...args);
+      if(res&&(res.status===502||res.status===503||res.status===504)){
+        showOfflineBanner('network');
+      }
+      return res;
+    }
     catch(e){
       if(!_browserReportsOnline())showOfflineBanner('browser');
-      else if(e instanceof TypeError&&!_isAbortError(e))void _probeOfflineRecovery().then(ok=>{if(!ok)showOfflineBanner('network');});
+      else if(e instanceof TypeError&&!_isAbortError(e)){
+        showOfflineBanner('network');
+      }
       throw e;
     }
   };
@@ -112,6 +120,11 @@ function initOfflineMonitor(){
   window.addEventListener('offline',()=>showOfflineBanner('browser'));
   window.addEventListener('online',()=>{if(_offlineVisible)checkOfflineRecoveryNow();});
   if(!_browserReportsOnline())showOfflineBanner('browser');
+  else {
+    _probeOfflineRecovery().then(ok=>{
+      if(!ok) showOfflineBanner('network');
+    });
+  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initOfflineMonitor,{once:true});
 else initOfflineMonitor();
@@ -1246,7 +1259,7 @@ function renderModelDropdown(){
       const displayName=rawValue.startsWith('@custom:')
         ? getModelLabel(rawValue)
         : (child.textContent||getModelLabel(rawValue));
-      _modelData.push({value:child.value,name:esc(displayName),id:esc(child.value),group:'',badge:_getConfiguredModelBadge(child.value,_badgeMap)});
+      _modelData.push({value:child.value,name:esc(displayName),id:esc(child.value),group:'',badge:_getConfiguredModelBadge(child.value,_badgeMap),custom:child.dataset.custom==='1'||false});
     }
   }
   const _existingConfiguredKeys=new Set(_modelData.map(existing=>_normalizeConfiguredModelKey(existing.value)));
@@ -1405,7 +1418,17 @@ function renderModelDropdown(){
       const badgeHtml=m.badge?`<span class="model-opt-badge model-opt-badge--${esc(m.badge.role||'configured')}">${esc(m.badge.label||'Configured')}</span>`:'';
       // Inline provider chip on every row that has a group (#1425)
       const providerChip=m.group?`<span class="model-opt-provider">${esc(m.group)}</span>`:'';
-      row.innerHTML=`<div class="model-opt-top"><span class="model-opt-name">${esc(m.name)}</span>${badgeHtml}${providerChip}</div><span class="model-opt-id">${esc(m.id)}</span>`;
+      const deleteHtml=m.custom?`<button class="model-opt-delete" title="Remove custom model">${li('x',10)}</button>`:'';
+      row.innerHTML=`<div class="model-opt-top"><span class="model-opt-name">${esc(m.name)}</span>${badgeHtml}${providerChip}${deleteHtml}</div><span class="model-opt-id">${esc(m.id)}</span>`;
+      if(m.custom){
+        const delBtn=row.querySelector('.model-opt-delete');
+        if(delBtn){
+          delBtn.onclick=(e)=>{
+            e.stopPropagation();
+            removeCustomModel(m.value);
+          };
+        }
+      }
       row.onclick=()=>selectModelFromDropdown(m.value);
       dd.appendChild(row);
     }
@@ -1463,6 +1486,20 @@ async function selectModelFromDropdown(value){
   syncModelChip();
   closeModelDropdown();
   if(typeof sel.onchange==='function') await sel.onchange();
+}
+
+async function removeCustomModel(value){
+  const sel=$('modelSelect');
+  if(!sel) return;
+  const wasActive=(sel.value===value);
+  const opt=Array.from(sel.options).find(o=>o.value===value&&o.dataset.custom==='1');
+  if(opt) opt.remove();
+  if(wasActive){
+    const fallback=_applySessionModelFallback(sel);
+    if(fallback&&typeof sel.onchange==='function') await sel.onchange();
+  }
+  renderModelDropdown();
+  if(typeof _positionModelDropdown==='function') _positionModelDropdown();
 }
 
 async function toggleModelDropdown(){

@@ -7543,6 +7543,9 @@ def _handle_live_models(handler, parsed):
         if not ids:
             from api.config import _PROVIDER_MODELS as _pm
             ids = [m["id"] for m in _pm.get(provider, [])]
+
+        from api.config import _is_retired_selector_model as _is_retired_model
+        ids = [mid for mid in ids if mid and not _is_retired_model(mid)]
         if not ids:
             return _finish({"provider": provider, "models": [], "count": 0})
 
@@ -7594,6 +7597,19 @@ def _handle_live_models(handler, parsed):
             return label
 
         models_out = [{"id": mid, "label": _make_label(mid)} for mid in ids if mid]
+
+        # Apply filtering for configured/authorized models if any exist
+        try:
+            from api.config import _get_configured_models_for_provider, _model_ids_match
+            configured_set = _get_configured_models_for_provider(provider)
+            if configured_set:
+                models_out = [
+                    m for m in models_out
+                    if any(_model_ids_match(m["id"], cfg_m) for cfg_m in configured_set)
+                ]
+        except Exception as _filter_err:
+            logger.debug("Failed to filter live models for provider %s: %s", provider, _filter_err)
+
         return _finish({"provider": provider, "models": models_out,
                         "count": len(models_out)})
 

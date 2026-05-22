@@ -1191,7 +1191,7 @@ const _THEMES=[
   {name:'System', value:'system', colors:['#FEFCF7','#0D0D1A','#B8860B']},
 ];
 const _SKINS=[
-  {name:'Default',  colors:['#FFD700','#FFBF00','#CD7F32']},
+  {name:'Hermes Gold', value:'default', colors:['#FFD700','#FFBF00','#CD7F32']},
   {name:'Ares',     colors:['#FF4444','#CC3333','#992222']},
   {name:'Mono',     colors:['#CCCCCC','#999999','#666666']},
   {name:'Slate',    colors:['#334155','#475569','#64748b']},
@@ -1221,7 +1221,15 @@ function _normalizeAppearance(theme,skin){
   const rawSkin=typeof skin==='string'?skin.trim().toLowerCase():'';
   const legacy=_LEGACY_THEME_MAP[rawTheme];
   const nextTheme=legacy?legacy.theme:(_VALID_THEMES.has(rawTheme)?rawTheme:'dark');
-  const nextSkin=_VALID_SKINS.has(rawSkin)?rawSkin:(legacy?legacy.skin:'default');
+  let defSkin='default';
+  let isDark=nextTheme==='dark';
+  if(nextTheme==='system'){
+    isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  }
+  if(!isDark){
+    defSkin='emerald';
+  }
+  const nextSkin=_VALID_SKINS.has(rawSkin)?rawSkin:(legacy?legacy.skin:defSkin);
   return {theme:nextTheme,skin:nextSkin};
 }
 

@@ -796,6 +796,124 @@ def _resolve_provider_alias(name: str) -> str:
     return _PROVIDER_ALIASES.get(raw, name)
 
 
+def _model_ids_match(id1: str, id2: str) -> bool:
+    """Check if two model IDs match, ignoring provider prefixes, common suffixes, and casing/formatting."""
+    def clean(s: str) -> str:
+        s = str(s or "").strip().lower()
+        if s.startswith("@") and ":" in s:
+            parts = s.split(":")
+            s = parts[-1] or s
+        if "/" in s:
+            parts = s.split("/")
+            s = parts[-1] or s
+        s = s.removesuffix("-codex").removesuffix("-preview").removesuffix(".preview")
+        return s.replace("-", "").replace(".", "").replace(" ", "").replace("_", "")
+
+    return clean(id1) == clean(id2)
+
+
+def _get_configured_models_for_provider(provider_id: str) -> set[str]:
+    """Retrieve all explicitly configured or authorized model IDs for the given provider."""
+    configured = set()
+    if not provider_id:
+        return configured
+
+    # Helper to get all equivalent provider names/aliases
+    def _get_provider_aliases(pid: str) -> set[str]:
+        p = str(pid).strip().lower().replace("_", "-")
+        aliases = {p}
+        resolved = _resolve_provider_alias(p)
+        if resolved:
+            aliases.add(resolved.strip().lower())
+        for k, v in _PROVIDER_ALIASES.items():
+            if v.strip().lower() == p or (resolved and v.strip().lower() == resolved.strip().lower()):
+                aliases.add(k.strip().lower())
+        if "google" in aliases or "gemini" in aliases or "google-gemini-cli" in aliases:
+            aliases.update({"google", "gemini", "google-gemini", "google-ai-studio", "google-gemini-cli"})
+        if "openai" in aliases or "openai-codex" in aliases:
+            aliases.update({"openai", "openai-codex"})
+        return {a.replace("_", "-") for a in aliases if a}
+
+    target_aliases = _get_provider_aliases(provider_id)
+
+    # 1. Read config.yaml model block
+    model_cfg = cfg.get("model", {})
+    if isinstance(model_cfg, dict):
+        p = model_cfg.get("provider")
+        if p and any(_canonicalise_provider_id(p) == ta or _resolve_provider_alias(p) == ta for ta in target_aliases):
+            for k in ("default", "model"):
+                val = model_cfg.get(k)
+                if val and isinstance(val, str):
+                    configured.add(val.strip())
+
+    # 2. Read config.yaml providers block
+    providers_cfg = cfg.get("providers", {})
+    if isinstance(providers_cfg, dict):
+        for raw_k, p_cfg in providers_cfg.items():
+            if any(_canonicalise_provider_id(raw_k) == ta or _resolve_provider_alias(raw_k) == ta for ta in target_aliases):
+                if isinstance(p_cfg, dict):
+                    for k in ("default_model", "model"):
+                        val = p_cfg.get(k)
+                        if val and isinstance(val, str):
+                            configured.add(val.strip())
+                    models_val = p_cfg.get("models")
+                    if isinstance(models_val, list):
+                        for item in models_val:
+                            if isinstance(item, str):
+                                configured.add(item.strip())
+                            elif isinstance(item, dict):
+                                for k in ("id", "model", "name"):
+                                    if item.get(k):
+                                        configured.add(str(item[k]).strip())
+                    elif isinstance(models_val, dict):
+                        for k in models_val.keys():
+                            if isinstance(k, str):
+                                configured.add(k.strip())
+
+    # 3. Read config.yaml fallback_providers
+    fallback_cfg = cfg.get("fallback_providers", [])
+    if isinstance(fallback_cfg, list):
+        for entry in fallback_cfg:
+            if isinstance(entry, dict):
+                p = entry.get("provider")
+                if p and any(_canonicalise_provider_id(p) == ta or _resolve_provider_alias(p) == ta for ta in target_aliases):
+                    m = entry.get("model")
+                    if m and isinstance(m, str):
+                        configured.add(m.strip())
+
+    # 4. Read auth.json credential_pool
+    try:
+        auth_store_path = _get_auth_store_path()
+        if auth_store_path.exists():
+            import json as _j
+            auth_store = _j.loads(auth_store_path.read_text(encoding="utf-8"))
+            if isinstance(auth_store, dict):
+                pool = auth_store.get("credential_pool", {})
+                if isinstance(pool, dict):
+                    for raw_k, entries in pool.items():
+                        if any(_canonicalise_provider_id(raw_k) == ta or _resolve_provider_alias(raw_k) == ta for ta in target_aliases):
+                            if isinstance(entries, list):
+                                for entry in entries:
+                                    if isinstance(entry, dict):
+                                        for k in ("model", "default_model"):
+                                            val = entry.get(k)
+                                            if val and isinstance(val, str):
+                                                configured.add(val.strip())
+                                        models_val = entry.get("models")
+                                        if isinstance(models_val, list):
+                                            for item in models_val:
+                                                if isinstance(item, str):
+                                                    configured.add(item.strip())
+                                                elif isinstance(item, dict):
+                                                    for k in ("id", "model", "name"):
+                                                        if item.get(k):
+                                                            configured.add(str(item[k]).strip())
+    except Exception:
+        pass
+
+    return {c for c in configured if c}
+
+
 def _custom_provider_slug_from_name(name: object) -> str:
     raw = str(name or "").strip().lower()
     if not raw:
@@ -1214,6 +1332,94 @@ _PROVIDER_MODELS = {
         {"id": "grok-4.20", "label": "Grok 4.20"},
     ],
 }
+
+
+# Retired / placeholder model IDs that should not be offered in the WebUI
+# selector.  These can still be typed manually as custom IDs, but they are
+# filtered from static fallbacks, provider caches, and configured-badge
+# injection so dead catalog rows do not keep reappearing after cache rebuilds.
+_RETIRED_SELECTOR_MODEL_IDS = frozenset({
+    # Anthropic placeholders / retired aliases
+    "anthropic/claude-opus-4.7",
+    "anthropic/claude-opus-4.6",
+    "anthropic/claude-sonnet-4.6",
+    "claude-opus-4.7",
+    "claude-opus-4.6",
+    "claude-opus-4-7",
+    "claude-opus-4-6",
+    "claude-sonnet-4.6",
+    "claude-sonnet-4-6",
+    # OpenAI / Codex placeholders
+    "openai/gpt-5.5",
+    "openai/gpt-5.5-pro",
+    "openai/gpt-5.5-mini",
+    "openai/gpt-5.4",
+    "openai/gpt-5.4-mini",
+    "openai/gpt-5.4-nano",
+    "gpt-5.5",
+    "gpt-5.5-pro",
+    "gpt-5.5-mini",
+    "gpt-5.4",
+    "gpt-5.4-pro",
+    "gpt-5.4-mini",
+    "gpt-5.4-nano",
+    # Google preview placeholders / retired preview IDs
+    "google/gemini-3.1-pro-preview",
+    "google/gemini-3-flash-preview",
+    "google/gemini-3.1-flash-lite-preview",
+    "gemini-3.1-pro-preview",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
+    # DeepSeek placeholders / legacy rows
+    "deepseek/deepseek-v4-flash",
+    "deepseek/deepseek-v4-pro",
+    "deepseek/deepseek-chat-v3-0324",
+    "deepseek/deepseek-r1",
+    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    "deepseek-chat-v3-0324",
+    "deepseek-r1",
+    "deepseek-reasoner",
+})
+
+
+def _retired_selector_model_keys(model_id: object) -> set[str]:
+    """Return normalized lookup keys for filtering retired picker entries."""
+    raw = str(model_id or "").strip().lower()
+    if not raw:
+        return set()
+    keys = {raw}
+    if raw.startswith("@") and ":" in raw:
+        unprefixed = raw.split(":", 1)[1]
+        keys.add(unprefixed)
+        keys.add("@" + unprefixed)
+    else:
+        unprefixed = raw
+    if "/" in unprefixed:
+        keys.add(unprefixed.split("/", 1)[1])
+        keys.add(unprefixed.rsplit("/", 1)[-1])
+    # Some provider catalogs alternate dot and hyphen separators for model
+    # generation numbers (claude-opus-4.7 vs claude-opus-4-7).
+    keys.update(k.replace(".", "-") for k in list(keys))
+    keys.update(k.replace("-", ".") for k in list(keys))
+    return keys
+
+
+def _is_retired_selector_model(model_id: object) -> bool:
+    return bool(_retired_selector_model_keys(model_id) & _RETIRED_SELECTOR_MODEL_IDS)
+
+
+def _filter_retired_selector_models(models: object) -> list[dict]:
+    """Return model entries excluding retired IDs, preserving order."""
+    if not isinstance(models, list):
+        return []
+    return [
+        model
+        for model in models
+        if not _is_retired_selector_model(
+            model.get("id") if isinstance(model, dict) else model
+        )
+    ]
 
 
 _AMBIENT_GH_CLI_MARKERS = frozenset({"gh_cli", "gh auth token"})
@@ -2281,6 +2487,7 @@ def _models_cache_catalog_fingerprint() -> dict:
     catalog_payload = {
         "provider_models": _PROVIDER_MODELS,
         "provider_display": _PROVIDER_DISPLAY,
+        "retired_selector_model_ids": sorted(_RETIRED_SELECTOR_MODEL_IDS),
     }
     try:
         encoded = json.dumps(
@@ -2753,7 +2960,7 @@ def get_available_models() -> dict:
 
         def _build_configured_model_badges() -> dict[str, dict[str, str]]:
             configured_entries: list[dict[str, str]] = []
-            if active_provider and default_model:
+            if active_provider and default_model and not _is_retired_selector_model(default_model):
                 configured_entries.append(
                     {
                         "provider": active_provider,
@@ -2769,7 +2976,7 @@ def get_available_models() -> dict:
                         continue
                     provider = _resolve_provider_alias(entry.get("provider"))
                     model = str(entry.get("model") or "").strip()
-                    if not provider or not model:
+                    if not provider or not model or _is_retired_selector_model(model):
                         continue
                     configured_entries.append(
                         {
@@ -3933,13 +4140,44 @@ def get_available_models() -> dict:
                             "models": [],
                         })
         else:
-            if default_model:
+            if default_model and not _is_retired_selector_model(default_model):
                 label = _get_label_for_model(default_model, groups)
                 groups.append(
                     {"provider": "Default", "provider_id": "default", "models": [{"id": default_model, "label": label}]}
                 )
+        # Filter models by configured/authorized set if any are configured for the provider
+        for group in groups:
+            g_pid = group.get("provider_id")
+            if g_pid:
+                configured_set = _get_configured_models_for_provider(g_pid)
+                if configured_set:
+                    filtered_models = []
+                    for m in group.get("models", []):
+                        m_id = m.get("id")
+                        if any(_model_ids_match(m_id, cfg_m) for cfg_m in configured_set):
+                            filtered_models.append(m)
+                    group["models"] = filtered_models
+
+                    if "extra_models" in group:
+                        filtered_extras = []
+                        for m in group.get("extra_models", []):
+                            m_id = m.get("id")
+                            if any(_model_ids_match(m_id, cfg_m) for cfg_m in configured_set):
+                                filtered_extras.append(m)
+                        group["extra_models"] = filtered_extras
+
+        for group in groups:
+            group["models"] = _filter_retired_selector_models(group.get("models", []))
+            if "extra_models" in group:
+                group["extra_models"] = _filter_retired_selector_models(group.get("extra_models", []))
 
         if default_model:
+            if _is_retired_selector_model(default_model):
+                logger.warning(
+                    "Retired model.default value %r omitted from model picker; "
+                    "choose a supported model in config.yaml.",
+                    default_model,
+                )
             # Guard against provider-id values mistakenly stored in
             # ``model.default``. The injection logic below puts ANY string
             # into the picker as a fake option, so a stray provider id
@@ -3948,11 +4186,10 @@ def get_available_models() -> dict:
             # (#1568). The user's misconfig is real, but the picker is
             # the wrong surface to surface it; we'd rather skip injection
             # and emit a warning so the underlying config issue is logged.
-            _looks_like_provider_id = (
+            elif _looks_like_provider_id := (
                 str(default_model).strip().lower().replace("_", "-") in _PROVIDER_DISPLAY
                 or _canonicalise_provider_id(default_model) in _PROVIDER_DISPLAY
-            )
-            if _looks_like_provider_id:
+            ):
                 logger.warning(
                     "Suspicious model.default value %r — looks like a provider id, "
                     "not a model id. Skipping picker injection. Check `model.default` "
