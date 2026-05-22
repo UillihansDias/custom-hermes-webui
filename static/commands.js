@@ -1280,6 +1280,41 @@ async function forkFromMessage(msgIdx){
   }catch(e){showToast(t('branch_failed')+e.message);}
 }
 
+async function deleteMessage(msgIdx){
+  if(!S.session||S.busy)return;
+  const initialSid = S.session.session_id;
+  const absoluteIndex = _oldestIdx + msgIdx - 1;
+
+  if(!confirm(t('confirm_delete_message') || 'Are you sure you want to delete this message?')) return;
+
+  try{
+    const data = await api('/api/session/delete_message', {
+      method: 'POST',
+      body: JSON.stringify({
+        session_id: initialSid,
+        message_index: absoluteIndex
+      })
+    });
+    if(data && data.error){
+      showToast(data.error);
+      return;
+    }
+    // Reload messages
+    const sData = await api(`/api/session?session_id=${encodeURIComponent(initialSid)}&messages=1&resolve_model=0`);
+    if(sData && sData.session){
+      S.messages = (sData.session.messages || []).filter(m => m && m.role);
+      S.toolCalls = [];
+      if(typeof clearLiveToolCards === 'function') clearLiveToolCards();
+      if(typeof _messagesTruncated !== 'undefined') _messagesTruncated = false;
+      if(typeof _oldestIdx !== 'undefined') _oldestIdx = sData.session._messages_offset || 0;
+      renderMessages();
+    }
+    showToast(t('message_deleted') || 'Message deleted');
+  }catch(e){
+    showToast((t('delete_failed') || 'Failed to delete message: ') + e.message);
+  }
+}
+
 let _skillCommandCache=[];
 let _skillCommandLoadPromise=null;
 let _skillCommandCacheReady=false;

@@ -40,6 +40,8 @@ const LOCALES = {
     image_pasted: 'Image pasted: ',
     // messages.js
     edit_message: 'Edit message',
+    delete_message: 'Delete message',
+    confirm_delete_message: 'Are you sure you want to delete this message?',
     regenerate: 'Regenerate response',
     copy: 'Copy',
     copied: 'Copied!',
@@ -4226,6 +4228,8 @@ const LOCALES = {
     export_session_json_tooltip: 'Экспортировать сессию как JSON',
     import_session_json_tooltip: 'Импортировать сессию из JSON',
     clear_conversation_btn_tooltip: 'Очистить все сообщения в этой беседе',
+    delete_message: 'Delete message',
+    confirm_delete_message: 'Are you sure you want to delete this message?',
     settings_label_rtl: 'Раскладка чата справа налево',
     settings_desc_rtl: 'Переворачивает выравнивание сообщений чата и поля ввода для языков вроде арабского или иврита. Влияет только на область чата — боковая панель и другие панели остаются слева направо.',
     settings_label_sound: 'Звук уведомления',

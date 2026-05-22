@@ -126,6 +126,49 @@ def undo_last(session_id: str) -> dict[str, Any]:
     }
 
 
+def delete_message(session_id: str, message_index: int) -> dict[str, Any]:
+    """Remove the message at the specified index from the session's messages list.
+
+    Raises:
+        KeyError: session not found
+        IndexError: message index out of bounds
+    """
+    with _get_session_agent_lock(session_id):
+        s = get_session(session_id)  # acquires LOCK transiently
+        with LOCK:
+            # Stale-object guard — see retry_last for the rationale.
+            s = SESSIONS.get(session_id, s)
+            history = s.messages or []
+            if message_index < 0 or message_index >= len(history):
+                raise IndexError("Message index out of bounds.")
+
+            deleted_msg = history[message_index]
+            deleted_text = _extract_text(deleted_msg.get('content', ''))
+            
+            new_history = list(history)
+            new_history.pop(message_index)
+            s.messages = new_history
+            
+            # Sync context_messages: if it exists, let's keep it clean by matching role and content
+            if isinstance(getattr(s, 'context_messages', None), list) and s.context_messages:
+                context_messages = s.context_messages
+                del_role = deleted_msg.get('role')
+                if del_role:
+                    for i in range(len(context_messages) - 1, -1, -1):
+                        ctx_msg = context_messages[i]
+                        if isinstance(ctx_msg, dict) and ctx_msg.get('role') == del_role:
+                            if _extract_text(ctx_msg.get('content', '')) == deleted_text:
+                                context_messages.pop(i)
+                                break
+        s.save()
+    preview = (deleted_text[:40] + '...') if len(deleted_text) > 40 else deleted_text
+    return {
+        'deleted_preview': preview,
+        'remaining_count': len(s.messages),
+    }
+
+
+
 def session_status(session_id: str) -> dict[str, Any]:
     """Return a snapshot of session state for /status.
 

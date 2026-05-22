@@ -5287,6 +5287,24 @@ def handle_post(handler, parsed) -> bool:
         except ValueError as e:
             return j(handler, {"error": str(e)})
 
+    if parsed.path == "/api/session/delete_message":
+        try:
+            require(body, "session_id")
+            require(body, "message_index")
+        except ValueError as e:
+            return bad(handler, str(e))
+        try:
+            from api.session_ops import delete_message
+            result = delete_message(body["session_id"], int(body["message_index"]))
+            return j(handler, {"ok": True, **result})
+        except KeyError:
+            return bad(handler, "Session not found", 404)
+        except IndexError as e:
+            return bad(handler, str(e), 400)
+        except ValueError as e:
+            return j(handler, {"error": str(e)})
+
+
     # ── YOLO mode toggle (POST) ──
     # Session-scoped only — stored in-memory on the server side.
     # Important lifecycle notes:
