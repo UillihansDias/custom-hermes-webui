@@ -3574,7 +3574,6 @@ def handle_get(handler, parsed) -> bool:
 
     # ── Status (GET) ──
     if parsed.path == "/api/status":
-        from api.agent_health import build_agent_health_payload
         return j(handler, build_agent_health_payload())
 
     if parsed.path.startswith("/api/kanban/"):
