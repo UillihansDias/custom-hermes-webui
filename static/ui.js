@@ -120,11 +120,6 @@ function initOfflineMonitor(){
   window.addEventListener('offline',()=>showOfflineBanner('browser'));
   window.addEventListener('online',()=>{if(_offlineVisible)checkOfflineRecoveryNow();});
   if(!_browserReportsOnline())showOfflineBanner('browser');
-  else {
-    _probeOfflineRecovery().then(ok=>{
-      if(!ok) showOfflineBanner('network');
-    });
-  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initOfflineMonitor,{once:true});
 else initOfflineMonitor();
