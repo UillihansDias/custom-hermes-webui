@@ -2571,7 +2571,9 @@ button:hover{background:rgba(124,185,255,.25)}
 .err{color:#e94560;font-size:12px;margin-top:10px;display:none}
 </style></head><body>
 <div class="card">
-  <div class="logo">{{BOT_NAME_INITIAL}}</div>
+  <div class="logo" style="background: none; border-radius: 0; box-shadow: none; display: flex; align-items: center; justify-content: center;">
+    <img src="static/logo.png" width="48" height="48" alt="Hermes Logo" style="object-fit: contain;">
+  </div>
   <h1>{{BOT_NAME}}</h1>
   <p class="sub">{{LOGIN_SUBTITLE}}</p>
   <form id="login-form" data-invalid-pw="{{LOGIN_INVALID_PW}}" data-conn-failed="{{LOGIN_CONN_FAILED}}">
