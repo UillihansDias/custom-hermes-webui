@@ -395,8 +395,9 @@ def main() -> int:
         agent_dir = discover_agent_dir()
 
     python_exe = ensure_python_has_webui_deps(discover_launcher_python(agent_dir), agent_dir)
+    default_state_parent = Path(os.getenv("HERMES_HOME", str(Path.home() / ".hermes")))
     state_dir = Path(
-        os.getenv("HERMES_WEBUI_STATE_DIR", str(Path.home() / ".hermes" / "webui"))
+        os.getenv("HERMES_WEBUI_STATE_DIR", str(default_state_parent / "webui"))
     ).expanduser()
     state_dir.mkdir(parents=True, exist_ok=True)
 

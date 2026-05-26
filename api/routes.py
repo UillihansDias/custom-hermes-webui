@@ -6248,11 +6248,25 @@ def _serve_static(handler, parsed):
     static_root = (Path(__file__).parent.parent / "static").resolve()
     # Strip the leading '/static/' prefix, then resolve and sandbox
     rel = parsed.path[len("/static/") :]
-    static_file = (static_root / rel).resolve()
-    try:
-        static_file.relative_to(static_root)
-    except ValueError:
-        return j(handler, {"error": "not found"}, status=404)
+    
+    # Dynamic Logo Injector: serve profile-specific brand assets if they exist
+    is_custom_brand_asset = rel in ("logo.png", "favicon-32.png", "apple-touch-icon.png")
+    served_from_profile = False
+    
+    if is_custom_brand_asset:
+        from api.config import STATE_DIR
+        profile_file = (STATE_DIR / rel).resolve()
+        if profile_file.exists() and profile_file.is_file():
+            static_file = profile_file
+            served_from_profile = True
+            
+    if not served_from_profile:
+        static_file = (static_root / rel).resolve()
+        try:
+            static_file.relative_to(static_root)
+        except ValueError:
+            return j(handler, {"error": "not found"}, status=404)
+            
     if not static_file.exists() or not static_file.is_file():
         return j(handler, {"error": "not found"}, status=404)
     ext = static_file.suffix.lower()
